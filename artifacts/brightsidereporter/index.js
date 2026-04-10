@@ -28,28 +28,58 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function parseRSS(xml, subreddit) {
   const posts = [];
-  const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
-  for (const item of items.slice(0, 8)) {
-    const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
-                   item.match(/<title>(.*?)<\/title>/) || [])[1] || "";
-    const link = (item.match(/<link>(.*?)<\/link>/) ||
-                  item.match(/<comments>(.*?)<\/comments>/) || [])[1] || "";
-    const desc = (item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) ||
-                  item.match(/<description>(.*?)<\/description>/) || [])[1] || "";
-    const commentsRaw = (item.match(/(\d+) comments/) || [])[1] || "0";
-    const upvotesRaw = (item.match(/(\d+) point/) || [])[1] || "0";
-    const cleanDesc = desc.replace(/<[^>]+>/g, "").replace(/&[a-z]+;/g, " ").trim().slice(0, 300);
-    if (title.length > 5) {
-      posts.push({
-        id: Math.random().toString(36).slice(2),
-        subreddit: subreddit.name,
-        brand: subreddit.brand,
-        title: title.trim(),
-        text: cleanDesc,
-        upvotes: parseInt(upvotesRaw, 10) || 0,
-        comments: parseInt(commentsRaw, 10) || 0,
-        url: link.trim(),
-      });
+  const isAtom = xml.includes("<feed") && xml.includes("<entry>");
+
+  if (isAtom) {
+    const entries = xml.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+    for (const entry of entries.slice(0, 8)) {
+      const title = (entry.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1] || "";
+      const link = (entry.match(/<link[^>]*href="([^"]*)"/) || [])[1] || "";
+      const content = (entry.match(/<content[^>]*>([\s\S]*?)<\/content>/) || [])[1] || "";
+      const decoded = content
+        .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+      const commentsMatch = decoded.match(/\[comments\]/);
+      const cleanDesc = decoded.replace(/<[^>]+>/g, "").replace(/&[a-z#0-9]+;/g, " ").trim().slice(0, 300);
+      const cleanTitle = title
+        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').trim();
+      if (cleanTitle.length > 5) {
+        posts.push({
+          id: Math.random().toString(36).slice(2),
+          subreddit: subreddit.name,
+          brand: subreddit.brand,
+          title: cleanTitle,
+          text: cleanDesc,
+          upvotes: 0,
+          comments: 0,
+          url: link.trim(),
+        });
+      }
+    }
+  } else {
+    const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+    for (const item of items.slice(0, 8)) {
+      const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
+                     item.match(/<title>(.*?)<\/title>/) || [])[1] || "";
+      const link = (item.match(/<link>(.*?)<\/link>/) ||
+                    item.match(/<comments>(.*?)<\/comments>/) || [])[1] || "";
+      const desc = (item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) ||
+                    item.match(/<description>(.*?)<\/description>/) || [])[1] || "";
+      const commentsRaw = (item.match(/(\d+) comments/) || [])[1] || "0";
+      const upvotesRaw = (item.match(/(\d+) point/) || [])[1] || "0";
+      const cleanDesc = desc.replace(/<[^>]+>/g, "").replace(/&[a-z]+;/g, " ").trim().slice(0, 300);
+      if (title.length > 5) {
+        posts.push({
+          id: Math.random().toString(36).slice(2),
+          subreddit: subreddit.name,
+          brand: subreddit.brand,
+          title: title.trim(),
+          text: cleanDesc,
+          upvotes: parseInt(upvotesRaw, 10) || 0,
+          comments: parseInt(commentsRaw, 10) || 0,
+          url: link.trim(),
+        });
+      }
     }
   }
   return posts;
