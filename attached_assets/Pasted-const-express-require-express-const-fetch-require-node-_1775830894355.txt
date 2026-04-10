@@ -1,0 +1,267 @@
+const express = require("express");
+const fetch = require("node-fetch");
+
+const app = express();
+app.use(express.json());
+app.use(express.static("public"));
+
+const SUBREDDITS = [
+  { name: "UpliftingNews", brand: "BrightSideReport" },
+  { name: "GoodNews", brand: "BrightSideReport" },
+  { name: "OptimistsUnite", brand: "BrightSideReport" },
+  { name: "MadeMeSmile", brand: "BrightSideReport" },
+  { name: "HumansBeingBros", brand: "BrightSideReport" },
+  { name: "GetMotivated", brand: "TimelessAchievement" },
+  { name: "Stoicism", brand: "TimelessAchievement" },
+  { name: "Productivity", brand: "TimelessAchievement" },
+  { name: "getdisciplined", brand: "TimelessAchievement" },
+  { name: "Productivitycafe", brand: "TimelessAchievement" },
+  { name: "Entrepreneur", brand: "MyDrivenThreads" },
+  { name: "smallbusiness", brand: "MyDrivenThreads" },
+  { name: "GymMotivation", brand: "MyDrivenThreads" },
+  { name: "Newsletters", brand: "BrightSideReport" },
+  { name: "Journalism", brand: "BrightSideReport" },
+];
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function parseRSS(xml, subreddit) {
+  const posts = [];
+  const items = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+  for (const item of items.slice(0, 8)) {
+    const title = (item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) ||
+                   item.match(/<title>(.*?)<\/title>/) || [])[1] || "";
+    const link = (item.match(/<link>(.*?)<\/link>/) ||
+                  item.match(/<comments>(.*?)<\/comments>/) || [])[1] || "";
+    const desc = (item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/) ||
+                  item.match(/<description>(.*?)<\/description>/) || [])[1] || "";
+    const commentsRaw = (item.match(/(\d+) comments/) || [])[1] || "0";
+    const upvotesRaw = (item.match(/(\d+) point/) || [])[1] || "0";
+    const cleanDesc = desc.replace(/<[^>]+>/g, "").replace(/&[a-z]+;/g, " ").trim().slice(0, 300);
+    if (title.length > 5) {
+      posts.push({
+        id: Math.random().toString(36).slice(2),
+        subreddit: subreddit.name,
+        brand: subreddit.brand,
+        title: title.trim(),
+        text: cleanDesc,
+        upvotes: parseInt(upvotesRaw, 10) || 0,
+        comments: parseInt(commentsRaw, 10) || 0,
+        url: link.trim(),
+      });
+    }
+  }
+  return posts;
+}
+
+async function fetchSubreddit(subreddit) {
+  const url = `https://www.reddit.com/r/${subreddit.name}/hot/.rss?limit=8`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "BrightSideReporter/1.0",
+        "Accept": "application/rss+xml, application/xml, text/xml",
+      },
+    });
+    console.log(`r/${subreddit.name}: HTTP ${res.status}`);
+    if (!res.ok) return { name: subreddit.name, posts: [], error: res.status };
+    const xml = await res.text();
+    const posts = parseRSS(xml, subreddit);
+    console.log(`r/${subreddit.name}: got ${posts.length} posts`);
+    return { name: subreddit.name, posts };
+  } catch (e) {
+    console.log(`r/${subreddit.name}: error — ${e.message}`);
+    return { name: subreddit.name, posts: [], error: e.message };
+  }
+}
+
+async function analyzePosts(posts) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set in environment");
+
+  const top = posts.sort((a, b) => b.comments - a.comments).slice(0, 20);
+
+  const prompt = `You are analyzing Reddit posts for Troy, who runs the account BrightSideReporter. His brands:
+1. BrightSideReport.com — positive news aggregator curating from 63 trusted sources
+2. Timeless Achievement — YouTube/TikTok on classic success philosophy (James Allen, Wattles, Marcus Aurelius, Haanel). YouTube: https://youtube.com/@TimelessAchievement
+3. My Driven Threads — motivational apparel at https://mydriventhreads.com
+
+Troy is an entrepreneur in Virginia Beach, Virginia. 16 years sober. Runs 3 service businesses. Authentic person, not a marketer. His Reddit persona must feel like a real human being.
+
+STRICT REDDIT RULES:
+- 90/10 rule: 90% genuine, 10% max promotional
+- Never lead with a link — always lead with genuine value
+- Only mention brands when it adds REAL value and feels completely natural
+- Never ask for upvotes, never sound like marketing copy
+
+POSTS TO ANALYZE:
+${top.map((p, i) => `[${i}] r/${p.subreddit} (${p.brand} fit) | ${p.upvotes} upvotes, ${p.comments} comments
+Title: ${p.title}${p.text ? `\nBody: ${p.text}` : ""}`).join("\n\n")}
+
+Return ONLY valid JSON — no markdown, no explanation. Pick the best 6:
+[{
+  "idx": <number>,
+  "relevance": <0-10>,
+  "engagement": <0-10>,
+  "promoFit": <0-10>,
+  "risk": "Low" or "Medium" or "High",
+  "why": "<1 sentence why this thread is worth engaging>",
+  "draft": "<2-4 sentences as Troy the real person. Warm, Virginia Beach entrepreneur energy. Lead with genuine insight. Brand link only at the very end if it genuinely helps.>",
+  "includeLink": true or false,
+  "linkUrl": "<full URL or empty string>"
+}]`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-opus-4-5",
+      max_tokens: 2000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic API error: ${res.status}`);
+
+  const data = await res.json();
+  const raw = data.content?.[0]?.text || "[]";
+  const clean = raw.replace(/```json|```/g, "").trim();
+  const recs = JSON.parse(clean);
+
+  return recs
+    .map((r) => ({ ...r, post: top[r.idx] }))
+    .filter((r) => r.post)
+    .sort((a, b) =>
+      b.relevance + b.engagement + b.promoFit -
+      (a.relevance + a.engagement + a.promoFit)
+    );
+}
+
+app.post("/api/reply", async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY not set" });
+
+  const { postContent, subreddit, tone } = req.body;
+  if (!postContent || postContent.trim().length < 5) {
+    return res.status(400).json({ error: "Post content is required" });
+  }
+
+  const toneGuide = {
+    genuine: "Purely genuine, no brand mention at all. Just Troy being a helpful human.",
+    subtle: "Genuine first, brand mention only if it fits naturally at the very end.",
+    value: "Lead with a substantive insight or story, then reference a brand resource if relevant.",
+  };
+
+  const prompt = `You are writing a Reddit response for Troy, who posts as BrightSideReporter.
+
+TROY'S BACKGROUND:
+- Entrepreneur in Virginia Beach, Virginia
+- Owns 4 businesses: Safe House Property Inspections, Pest Heroes, HCJ Pool Services, My Driven Threads
+- 16 years sober. Passionate about classic success philosophy (James Allen, Wallace Wattles, Marcus Aurelius, Stoics)
+- Runs BrightSideReport.com — positive news aggregator from 63 trusted sources
+- Runs Timeless Achievement YouTube on classic motivation content
+- Authentic, grounded, no-BS. Warm but direct.
+
+TROY'S BRANDS (only mention if genuinely relevant):
+- BrightSideReport.com — positive news aggregator
+- https://youtube.com/@TimelessAchievement — classic success philosophy
+- https://mydriventhreads.com — motivational apparel
+
+TONE: ${toneGuide[tone] || toneGuide.genuine}
+
+REDDIT RULES:
+- Write as Troy the person, never as a brand
+- Lead with genuine value, insight, or personal experience
+- No fluff, no "great post!" openers
+- If citing philosophy, be specific: name the book, author, idea
+- 2-5 sentences unless the post clearly warrants more
+- Never ask for upvotes
+- Only include a brand link if it directly and genuinely helps
+
+SUBREDDIT: ${subreddit ? `r/${subreddit}` : "not specified"}
+
+THE POST:
+---
+${postContent.trim()}
+---
+
+Return ONLY valid JSON, no markdown:
+{
+  "assessment": "<2-3 sentences: what this post is really about and what angle Troy should take>",
+  "riskLevel": "Low" or "Medium" or "High",
+  "riskReason": "<1 sentence why>",
+  "response": "<The actual response, ready to copy-paste into Reddit, written as Troy>",
+  "includeLink": true or false,
+  "linkUrl": "<full URL if relevant, empty string if not>",
+  "linkReason": "<1 sentence: why this link helps or why no link is needed>",
+  "alternateAngle": "<An alternate 2-3 sentence response taking a different approach>"
+}`;
+
+  try {
+    const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-5",
+        max_tokens: 1200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!apiRes.ok) throw new Error(`Anthropic API error: ${apiRes.status}`);
+
+    const data = await apiRes.json();
+    const raw = data.content?.[0]?.text || "{}";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    res.json(JSON.parse(clean));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/scan", async (req, res) => {
+  try {
+    const results = [];
+    for (const sub of SUBREDDITS) {
+      const result = await fetchSubreddit(sub);
+      results.push(result);
+      await sleep(500);
+    }
+
+    const allPosts = results.flatMap((r) => r.posts);
+    const subStatus = results.map((r) => ({
+      name: r.name,
+      count: r.posts.length,
+      error: r.error || null,
+    }));
+
+    console.log(`Total posts fetched: ${allPosts.length}`);
+
+    if (allPosts.length === 0) {
+      return res.json({ subStatus, recommendations: [], totalPosts: 0 });
+    }
+
+    const recommendations = await analyzePosts(allPosts);
+    res.json({ subStatus, recommendations, totalPosts: allPosts.length });
+  } catch (e) {
+    console.log("Scan error:", e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/api/subreddits", (req, res) => {
+  res.json(SUBREDDITS);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Reddit Monitor running on port ${PORT}`);
+});

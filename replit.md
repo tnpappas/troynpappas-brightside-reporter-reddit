@@ -1,27 +1,35 @@
-# Workspace
+# BrightSideReporter
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Reddit engagement scanner and reply generator for BrightSideReporter. Scans 15 target subreddits, analyzes posts with Claude, and drafts authentic responses.
 
 ## Stack
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
+- **Runtime**: Node.js
+- **Framework**: Express 5
+- **HTTP Client**: node-fetch@2
+- **AI**: Anthropic Claude API (claude-opus-4-5)
 - **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+
+## Structure
+
+- `artifacts/api-server/index.js` — Main application file (all server code)
+- `artifacts/api-server/public/` — Static files directory
+- `artifacts/api-server/package.json` — Dependencies (express, node-fetch)
+
+## API Endpoints
+
+- `GET /api/subreddits` — List all monitored subreddits
+- `GET /api/scan` — Scan all subreddits and get AI-analyzed recommendations
+- `POST /api/reply` — Generate a Reddit reply for a given post
+
+## Environment Variables
+
+- `PORT` — Server port (default: 3000, set to 8080 in production)
+- `ANTHROPIC_API_KEY` — Required for Claude AI features (scan analysis and reply generation)
 
 ## Key Commands
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
-
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+- `node artifacts/api-server/index.js` — Run the server
+- `pnpm install --filter @workspace/api-server` — Install dependencies
