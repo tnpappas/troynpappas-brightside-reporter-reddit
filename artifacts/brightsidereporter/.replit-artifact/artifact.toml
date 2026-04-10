@@ -1,0 +1,39 @@
+kind = "web"
+previewPath = "/"
+title = "BrightSideReporter"
+version = "1.0.0"
+id = "artifacts/brightsidereporter"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = ["/"]
+localPort = 25348
+
+[services.development]
+run = "PORT=25348 node /home/runner/workspace/artifacts/brightsidereporter/index.js"
+
+[services.production]
+
+[services.production.build]
+args = ["echo", "no build needed"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+
+[services.production.run]
+args = ["node", "/home/runner/workspace/artifacts/brightsidereporter/index.js"]
+
+[services.production.run.env]
+PORT = "25348"
+NODE_ENV = "production"
+
+[services.production.health.startup]
+path = "/api/subreddits"
+
+[services.env]
+PORT = "25348"

@@ -2,11 +2,11 @@
 
 ## Overview
 
-Reddit engagement scanner and reply generator for BrightSideReporter. Scans 15 target subreddits, analyzes posts with Claude, and drafts authentic responses.
+Reddit engagement scanner and reply generator for BrightSideReporter. Scans 15 target subreddits, analyzes posts with Claude, and drafts authentic responses in Troy's voice.
 
 ## Stack
 
-- **Runtime**: Node.js
+- **Runtime**: Node.js (plain CommonJS, no TypeScript)
 - **Framework**: Express 5
 - **HTTP Client**: node-fetch@2
 - **AI**: Anthropic Claude API (claude-opus-4-5)
@@ -14,9 +14,10 @@ Reddit engagement scanner and reply generator for BrightSideReporter. Scans 15 t
 
 ## Structure
 
-- `artifacts/api-server/index.js` — Main application file (all server code)
-- `artifacts/api-server/public/` — Static files directory
-- `artifacts/api-server/package.json` — Dependencies (express, node-fetch)
+- `artifacts/brightsidereporter/index.js` — Main application file (Express server + all API routes)
+- `artifacts/brightsidereporter/public/index.html` — Frontend UI (single-page, vanilla HTML/CSS/JS)
+- `artifacts/brightsidereporter/package.json` — Dependencies (express, node-fetch)
+- `artifacts/api-server/` — Legacy copy (original API artifact, now superseded by brightsidereporter)
 
 ## API Endpoints
 
@@ -26,10 +27,5 @@ Reddit engagement scanner and reply generator for BrightSideReporter. Scans 15 t
 
 ## Environment Variables
 
-- `PORT` — Server port (default: 3000, set to 8080 in production)
+- `PORT` — Server port (set to 25348 for the web artifact)
 - `ANTHROPIC_API_KEY` — Required for Claude AI features (scan analysis and reply generation)
-
-## Key Commands
-
-- `node artifacts/api-server/index.js` — Run the server
-- `pnpm install --filter @workspace/api-server` — Install dependencies

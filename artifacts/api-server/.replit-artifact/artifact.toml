@@ -1,13 +1,13 @@
 kind = "api"
-previewPath = "/"
-title = "BrightSideReporter"
+previewPath = "/api"
+title = "BrightSideReporter API"
 version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
 
 [[services]]
 localPort = 8080
 name = "API Server"
-paths = ["/"]
+paths = ["/api"]
 
 [services.development]
 run = "PORT=8080 node /home/runner/workspace/artifacts/api-server/index.js"
