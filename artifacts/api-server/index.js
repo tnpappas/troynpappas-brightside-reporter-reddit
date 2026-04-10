@@ -124,6 +124,7 @@ STRICT REDDIT RULES:
 - Never lead with a link — always lead with genuine value
 - Only mention brands when it adds REAL value and feels completely natural
 - Never ask for upvotes, never sound like marketing copy
+- Never use em dashes (—) in any response. Use commas, periods, or semicolons instead
 
 POSTS TO ANALYZE:
 ${top.map((p, i) => `[${i}] r/${p.subreddit} (${p.brand} fit) | ${p.upvotes} upvotes, ${p.comments} comments
@@ -211,6 +212,7 @@ REDDIT RULES:
 - If citing philosophy, be specific: name the book, author, idea
 - 2-5 sentences unless the post clearly warrants more
 - Never ask for upvotes
+- Never use em dashes (—) in any response. Use commas, periods, or semicolons instead
 - Only include a brand link if it directly and genuinely helps
 
 SUBREDDIT: ${subreddit ? `r/${subreddit}` : "not specified"}
