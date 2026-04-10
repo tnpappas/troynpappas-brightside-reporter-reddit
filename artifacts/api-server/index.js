@@ -1,5 +1,4 @@
 const express = require("express");
-const fetch = require("node-fetch");
 const path = require("path");
 
 const app = express();
@@ -89,8 +88,10 @@ async function fetchSubreddit(subreddit) {
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "BrightSideReporter/1.0",
-        "Accept": "application/rss+xml, application/xml, text/xml",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
       },
     });
     console.log(`r/${subreddit.name}: HTTP ${res.status}`);
@@ -263,7 +264,7 @@ app.get("/api/scan", async (req, res) => {
     for (const sub of SUBREDDITS) {
       const result = await fetchSubreddit(sub);
       results.push(result);
-      await sleep(500);
+      await sleep(1200);
     }
 
     const allPosts = results.flatMap((r) => r.posts);
