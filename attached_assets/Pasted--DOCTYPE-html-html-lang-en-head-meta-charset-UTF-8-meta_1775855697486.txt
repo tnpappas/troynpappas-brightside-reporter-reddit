@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrightSideReporter — Reddit Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F5F3EE;--surface:#fff;--border:#E4E0D8;--text:#1A1814;--muted:#7A7570;--accent:#2D6A4F;--accent-light:#E8F5EE;--amber:#C47A0A;--amber-light:#FEF3DC;--red:#C0392B;--red-light:#FDECEA;--blue:#1D5FAD;--blue-light:#EAF1FB;--purple:#5B3FA0;--purple-light:#F0EDFB}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:'DM Serif Display',serif;font-size:18px}.logo span{color:var(--accent)}
+.header-meta{font-size:13px;color:var(--muted)}
+main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
+.tab-nav{display:flex;gap:4px;margin-bottom:2rem;border-bottom:1px solid var(--border)}
+.tab-btn{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:10px 18px;border:none;background:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab-btn:hover{color:var(--text)}.tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;border-radius:8px;font-size:14px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--text);color:#fff}.btn-primary:hover{background:#333}.btn-primary:disabled{background:#ccc;cursor:not-allowed}
+.btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{background:var(--bg)}
+.btn-sm{padding:7px 14px;font-size:13px;border-radius:6px}
+.hero{margin-bottom:2rem}
+.hero h1{font-family:'DM Serif Display',serif;font-size:32px;letter-spacing:-.03em;line-height:1.2;margin-bottom:8px}
+.hero p{font-size:15px;color:var(--muted);line-height:1.6}
+.scan-bar{display:flex;gap:12px;align-items:center;margin-bottom:2rem;flex-wrap:wrap}
+.status-bar{display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+.status-bar.visible{display:block}
+.status-label{font-size:13px;font-weight:500;margin-bottom:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px}
+.sub-chip{font-size:12px;padding:5px 10px;border-radius:6px;border:1p
