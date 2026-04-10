@@ -130,7 +130,7 @@ POSTS TO ANALYZE:
 ${top.map((p, i) => `[${i}] r/${p.subreddit} (${p.brand} fit) | ${p.upvotes} upvotes, ${p.comments} comments
 Title: ${p.title}${p.text ? `\nBody: ${p.text}` : ""}`).join("\n\n")}
 
-Return ONLY valid JSON — no markdown, no explanation. Pick the best 6:
+Return ONLY valid JSON — no markdown, no explanation. Pick the best 10:
 [{
   "idx": <number>,
   "relevance": <0-10>,
@@ -152,7 +152,7 @@ Return ONLY valid JSON — no markdown, no explanation. Pick the best 6:
     },
     body: JSON.stringify({
       model: "claude-opus-4-5",
-      max_tokens: 2000,
+      max_tokens: 3500,
       messages: [{ role: "user", content: prompt }],
     }),
   });
