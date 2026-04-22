@@ -261,6 +261,142 @@ Return ONLY valid JSON, no markdown:
   }
 });
 
+async function fetchRedditThread(threadUrl) {
+  let clean = threadUrl.trim().split("?")[0].split("#")[0];
+  if (clean.endsWith("/")) clean = clean.slice(0, -1);
+  const rssUrl = clean + "/.rss";
+  const res = await fetch(rssUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept-Encoding": "gzip, deflate, br",
+    },
+  });
+  if (!res.ok) throw new Error(`Reddit returned HTTP ${res.status}`);
+  const xml = await res.text();
+  const subMatch = clean.match(/\/r\/([^/]+)\//);
+  const subreddit = subMatch ? subMatch[1] : "";
+  const entries = xml.match(/<entry>([\s\S]*?)<\/entry>/g) || [];
+  if (entries.length === 0) throw new Error("No content found in thread feed");
+
+  const decode = (s) => s
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'").replace(/&apos;/g, "'");
+  const stripHtml = (s) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+  const first = entries[0];
+  const titleRaw = (first.match(/<title[^>]*>([\s\S]*?)<\/title>/) || [])[1] || "";
+  const contentRaw = (first.match(/<content[^>]*>([\s\S]*?)<\/content>/) || [])[1] || "";
+  const title = decode(titleRaw).trim();
+  const body = stripHtml(decode(contentRaw)).slice(0, 1500);
+
+  const topComments = [];
+  for (const e of entries.slice(1, 6)) {
+    const cAuthor = (e.match(/<author>[\s\S]*?<name>([^<]+)<\/name>/) || [])[1] || "user";
+    const cContent = (e.match(/<content[^>]*>([\s\S]*?)<\/content>/) || [])[1] || "";
+    const text = stripHtml(decode(cContent)).slice(0, 400);
+    if (text) topComments.push(`${cAuthor}: ${text}`);
+  }
+  return { title, body, subreddit, topComments };
+}
+
+app.post("/api/thread-comment", async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY not set" });
+  const { url, tone } = req.body || {};
+  if (!url || !/^https?:\/\/(www\.|old\.)?reddit\.com\/r\/[^/]+\/comments\//i.test(url)) {
+    return res.status(400).json({ error: "A valid Reddit thread URL is required" });
+  }
+
+  let thread;
+  try {
+    thread = await fetchRedditThread(url);
+  } catch (e) {
+    return res.status(502).json({ error: `Could not fetch thread: ${e.message}` });
+  }
+
+  const toneGuide = {
+    genuine: "Purely genuine, no brand mention at all. Just Troy being a helpful human.",
+    subtle: "Genuine first, brand mention only if it fits naturally at the very end.",
+    value: "Lead with a substantive insight or story, then reference a brand resource if relevant.",
+  };
+
+  const postContent = `Title: ${thread.title}\n\n${thread.body || "(no body text)"}` +
+    (thread.topComments.length ? `\n\nTop comments so far:\n- ${thread.topComments.join("\n- ")}` : "");
+
+  const prompt = `You are writing a Reddit comment for Troy, who posts as BrightSideReporter.
+
+TROY'S BACKGROUND:
+- Entrepreneur in Virginia Beach, Virginia
+- Owns 4 businesses: Safe House Property Inspections, Pest Heroes, HCJ Pool Services, My Driven Threads
+- 16 years sober. Passionate about classic success philosophy (James Allen, Wallace Wattles, Marcus Aurelius, Stoics)
+- Runs BrightSideReport.com, a positive news aggregator from 63 trusted sources
+- Runs Timeless Achievement YouTube on classic motivation content
+- Authentic, grounded, no-BS. Warm but direct.
+
+TROY'S BRANDS (only mention if genuinely relevant):
+- BrightSideReport.com, positive news aggregator
+- https://youtube.com/@TimelessAchievement, classic success philosophy
+- https://mydriventhreads.com, motivational apparel
+
+TONE: ${toneGuide[tone] || toneGuide.genuine}
+
+REDDIT RULES:
+- Write as Troy the person, never as a brand
+- Lead with genuine value, insight, or personal experience
+- No fluff, no "great post!" openers
+- If citing philosophy, be specific: name the book, author, idea
+- 2-5 sentences unless the post clearly warrants more
+- Never ask for upvotes
+- Never use em dashes (—) in any response. Use commas, periods, or semicolons instead
+- Only include a brand link if it directly and genuinely helps
+- If top comments already cover an angle, take a different one
+
+SUBREDDIT: r/${thread.subreddit}
+
+THE THREAD:
+---
+${postContent}
+---
+
+Return ONLY valid JSON, no markdown:
+{
+  "assessment": "<2-3 sentences: what this post is really about and what angle Troy should take>",
+  "riskLevel": "Low" or "Medium" or "High",
+  "riskReason": "<1 sentence why>",
+  "response": "<The actual comment, ready to copy-paste into Reddit, written as Troy>",
+  "includeLink": true or false,
+  "linkUrl": "<full URL if relevant, empty string if not>",
+  "linkReason": "<1 sentence: why this link helps or why no link is needed>",
+  "alternateAngle": "<An alternate 2-3 sentence comment taking a different approach>"
+}`;
+
+  try {
+    const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-5",
+        max_tokens: 1200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+    if (!apiRes.ok) throw new Error(`Anthropic API error: ${apiRes.status}`);
+    const data = await apiRes.json();
+    const raw = data.content?.[0]?.text || "{}";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(clean);
+    res.json({ ...parsed, thread: { title: thread.title, subreddit: thread.subreddit, body: thread.body } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/api/scan", async (req, res) => {
   try {
     const results = [];

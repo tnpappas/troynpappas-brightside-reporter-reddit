@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BrightSideReporter — Reddit Monitor</title>
+<title>BrightSide Reporter Reddit</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -103,13 +103,14 @@ main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
 </head>
 <body>
 <header>
-  <div class="logo">Bright<span>Side</span>Reporter</div>
+  <div class="logo">Bright<span>Side</span> Reporter Reddit</div>
   <div class="header-meta" id="last-scan">Not yet scanned</div>
 </header>
 <main>
   <nav class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('scanner')">Subreddit Scanner</button>
     <button class="tab-btn" onclick="switchTab('reply')">Quick Reply</button>
+    <button class="tab-btn" onclick="switchTab('thread')">Thread URL</button>
   </nav>
 
   <div id="tab-scanner" class="tab-panel active">
@@ -191,14 +192,115 @@ main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
       </div>
     </div>
   </div>
+  <div id="tab-thread" class="tab-panel">
+    <h2 class="qr-title">Thread URL → Comment</h2>
+    <p class="qr-sub">Paste a Reddit thread URL. We'll fetch it and draft a comment in your voice.</p>
+    <div class="qr-form">
+      <label class="qr-label" for="th-url">Reddit thread URL</label>
+      <input class="qr-input" id="th-url" type="url" placeholder="https://www.reddit.com/r/Stoicism/comments/..." style="width:100%;margin-bottom:14px;" />
+      <div class="qr-row">
+        <div class="qr-field">
+          <label class="qr-label" for="th-tone">Approach</label>
+          <select class="qr-select" id="th-tone">
+            <option value="genuine">Purely genuine — no brand mention</option>
+            <option value="subtle">Subtle — brand only if natural</option>
+            <option value="value">Value post — insight + brand resource</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="generateThreadComment()" id="th-btn" style="align-self:flex-end;white-space:nowrap;">Fetch & generate</button>
+      </div>
+    </div>
+    <div class="qr-error" id="th-error"></div>
+    <div class="qr-loading" id="th-loading"><div class="spinner"></div><span id="th-loading-text">Fetching thread...</span></div>
+    <div class="qr-result" id="th-result">
+      <div class="result-block">
+        <div class="result-block-header"><span class="block-title" id="th-thread-title">Thread</span></div>
+        <div class="assess-body" id="th-thread-meta"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-block-header">
+          <span class="block-title">Claude's read on this post</span>
+          <span class="risk-pill" id="th-risk-pill"></span>
+        </div>
+        <div class="assess-body" id="th-assessment"></div>
+        <div style="padding:0 16px 10px;font-size:12px;color:var(--muted)" id="th-risk-reason"></div>
+      </div>
+      <div class="result-block">
+        <div class="result-block-header">
+          <span class="block-title">Your comment — ready to post</span>
+          <button class="alt-toggle" onclick="toggleThAlt()">Show alternate angle</button>
+        </div>
+        <div class="block-body" id="th-response"></div>
+        <div class="alt-body" id="th-alt"></div>
+        <div class="block-actions">
+          <button class="btn btn-secondary btn-sm" id="th-copy-btn" onclick="copyText('th-response','th-copy-btn')">Copy comment</button>
+          <button class="btn btn-secondary btn-sm" id="th-copy-alt-btn" onclick="copyText('th-alt','th-copy-alt-btn')" style="display:none">Copy alternate</button>
+          <a class="reddit-link" id="th-open-link" href="#" target="_blank" rel="noopener">Open thread ↗</a>
+        </div>
+        <div class="link-row" id="th-link-row" style="display:none">
+          <span>Suggested link:</span>
+          <a id="th-link-url" href="#" target="_blank"></a>
+          <span style="font-size:12px" id="th-link-reason"></span>
+        </div>
+      </div>
+    </div>
+  </div>
 </main>
 <script>
 const BRANDS={BrightSideReport:{label:"Bright Side",cls:"tag-bsr"},TimelessAchievement:{label:"Timeless",cls:"tag-ta"},MyDrivenThreads:{label:"MDT",cls:"tag-mdt"}};
-let scanning=false,altVisible=false;
+let scanning=false,altVisible=false,thAltVisible=false;
 function switchTab(t){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='scanner')||(i===1&&t==='reply')));
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='scanner')||(i===1&&t==='reply')||(i===2&&t==='thread')));
   document.getElementById('tab-scanner').classList.toggle('active',t==='scanner');
   document.getElementById('tab-reply').classList.toggle('active',t==='reply');
+  document.getElementById('tab-thread').classList.toggle('active',t==='thread');
+}
+function toggleThAlt(){
+  thAltVisible=!thAltVisible;
+  document.getElementById('th-alt').style.display=thAltVisible?'block':'none';
+  document.getElementById('th-copy-alt-btn').style.display=thAltVisible?'inline-flex':'none';
+  document.querySelector('#tab-thread .alt-toggle').textContent=thAltVisible?'Hide alternate':'Show alternate angle';
+}
+async function generateThreadComment(){
+  const url=document.getElementById('th-url').value.trim();
+  const errEl=document.getElementById('th-error');
+  if(!/^https?:\/\/(www\.|old\.)?reddit\.com\/r\/[^/]+\/comments\//i.test(url)){
+    errEl.textContent='Please paste a full Reddit thread URL (https://www.reddit.com/r/.../comments/...)';
+    errEl.style.display='block';return;
+  }
+  errEl.style.display='none';
+  document.getElementById('th-result').classList.remove('visible');
+  const loading=document.getElementById('th-loading');
+  loading.classList.add('visible');
+  document.getElementById('th-loading-text').textContent='Fetching thread from Reddit...';
+  document.getElementById('th-btn').disabled=true;
+  thAltVisible=false;document.getElementById('th-alt').style.display='none';
+  document.getElementById('th-copy-alt-btn').style.display='none';
+  const tone=document.getElementById('th-tone').value;
+  try{
+    const res=await fetch('/api/thread-comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,tone})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Failed');
+    document.getElementById('th-thread-title').textContent=data.thread?.title||'Thread';
+    document.getElementById('th-thread-meta').textContent='r/'+(data.thread?.subreddit||'?')+(data.thread?.body?' · '+data.thread.body.slice(0,200)+(data.thread.body.length>200?'…':''):'');
+    document.getElementById('th-assessment').textContent=data.assessment||'';
+    const rp=document.getElementById('th-risk-pill');
+    rp.textContent=(data.riskLevel||'Unknown')+' risk';
+    rp.className='risk-pill risk-'+(data.riskLevel||'Low');
+    document.getElementById('th-risk-reason').textContent=data.riskReason||'';
+    document.getElementById('th-response').textContent=data.response||'';
+    document.getElementById('th-alt').textContent=data.alternateAngle||'';
+    document.getElementById('th-open-link').href=url;
+    const lr=document.getElementById('th-link-row');
+    if(data.includeLink&&data.linkUrl){
+      const a=document.getElementById('th-link-url');a.href=data.linkUrl;a.textContent=data.linkUrl;
+      document.getElementById('th-link-reason').textContent=data.linkReason||'';
+      lr.style.display='flex';
+    }else{lr.style.display='none';}
+    document.getElementById('th-result').classList.add('visible');
+  }catch(e){errEl.textContent='Error: '+e.message;errEl.style.display='block';}
+  loading.classList.remove('visible');
+  document.getElementById('th-btn').disabled=false;
 }
 function toggleAlt(){
   altVisible=!altVisible;

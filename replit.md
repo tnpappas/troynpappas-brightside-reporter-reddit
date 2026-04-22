@@ -1,4 +1,4 @@
-# BrightSideReporter
+# BrightSide Reporter Reddit
 
 ## Overview
 
