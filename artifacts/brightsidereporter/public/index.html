@@ -146,6 +146,8 @@ main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
     <div class="qr-form">
       <label class="qr-label" for="qr-post">Paste the Reddit post or comment</label>
       <textarea class="qr-textarea" id="qr-post" placeholder="Paste the post title and body here..."></textarea>
+      <label class="qr-label" for="qr-anecdote">Personal anecdote (optional)</label>
+      <textarea class="qr-textarea" id="qr-anecdote" style="min-height:80px" placeholder="A story or detail from your life Claude can weave into the response. Only used if it genuinely fits the post."></textarea>
       <div class="qr-row">
         <div class="qr-field">
           <label class="qr-label" for="qr-sub">Subreddit (optional)</label>
@@ -157,6 +159,16 @@ main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
             <option value="genuine">Purely genuine — no brand mention</option>
             <option value="subtle">Subtle — brand only if natural</option>
             <option value="value">Value post — insight + brand resource</option>
+          </select>
+        </div>
+        <div class="qr-field">
+          <label class="qr-label" for="qr-mood">Tone</label>
+          <select class="qr-select" id="qr-mood">
+            <option value="auto">Auto — match the post</option>
+            <option value="humor">A bit of humor</option>
+            <option value="empathetic">Empathetic</option>
+            <option value="serious">Serious</option>
+            <option value="informative">Informative</option>
           </select>
         </div>
         <button class="btn btn-primary" onclick="generateReply()" id="qr-btn" style="align-self:flex-end;white-space:nowrap;">Generate response</button>
@@ -198,6 +210,8 @@ main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
     <div class="qr-form">
       <label class="qr-label" for="th-url">Reddit thread URL</label>
       <input class="qr-input" id="th-url" type="url" placeholder="https://www.reddit.com/r/Stoicism/comments/..." style="width:100%;margin-bottom:14px;" />
+      <label class="qr-label" for="th-anecdote">Personal anecdote (optional)</label>
+      <textarea class="qr-textarea" id="th-anecdote" style="min-height:80px" placeholder="A story or detail from your life Claude can weave into the comment. Only used if it genuinely fits the thread."></textarea>
       <div class="qr-row">
         <div class="qr-field">
           <label class="qr-label" for="th-tone">Approach</label>
@@ -205,6 +219,16 @@ main{max-width:860px;margin:0 auto;padding:2rem 1.5rem}
             <option value="genuine">Purely genuine — no brand mention</option>
             <option value="subtle">Subtle — brand only if natural</option>
             <option value="value">Value post — insight + brand resource</option>
+          </select>
+        </div>
+        <div class="qr-field">
+          <label class="qr-label" for="th-mood">Tone</label>
+          <select class="qr-select" id="th-mood">
+            <option value="auto">Auto — match the thread</option>
+            <option value="humor">A bit of humor</option>
+            <option value="empathetic">Empathetic</option>
+            <option value="serious">Serious</option>
+            <option value="informative">Informative</option>
           </select>
         </div>
         <button class="btn btn-primary" onclick="generateThreadComment()" id="th-btn" style="align-self:flex-end;white-space:nowrap;">Fetch & generate</button>
@@ -277,8 +301,10 @@ async function generateThreadComment(){
   thAltVisible=false;document.getElementById('th-alt').style.display='none';
   document.getElementById('th-copy-alt-btn').style.display='none';
   const tone=document.getElementById('th-tone').value;
+  const mood=document.getElementById('th-mood').value;
+  const anecdote=document.getElementById('th-anecdote').value.trim();
   try{
-    const res=await fetch('/api/thread-comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,tone})});
+    const res=await fetch('/api/thread-comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,tone,mood,anecdote})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
     document.getElementById('th-thread-title').textContent=data.thread?.title||'Thread';
@@ -383,8 +409,10 @@ async function generateReply(){
   document.getElementById('qr-copy-alt-btn').style.display='none';
   const subreddit=document.getElementById('qr-sub').value.trim().replace(/^r\//,'');
   const tone=document.getElementById('qr-tone').value;
+  const mood=document.getElementById('qr-mood').value;
+  const anecdote=document.getElementById('qr-anecdote').value.trim();
   try{
-    const res=await fetch('/api/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postContent,subreddit,tone})});
+    const res=await fetch('/api/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({postContent,subreddit,tone,mood,anecdote})});
     const data=await res.json();
     if(!res.ok)throw new Error(data.error||'Failed');
     document.getElementById('qr-assessment').textContent=data.assessment||'';

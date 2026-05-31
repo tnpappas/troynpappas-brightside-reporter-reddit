@@ -200,7 +200,7 @@ app.post("/api/reply", async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY not set" });
 
-  const { postContent, subreddit, tone } = req.body;
+  const { postContent, subreddit, tone, mood, anecdote } = req.body;
   if (!postContent || postContent.trim().length < 5) {
     return res.status(400).json({ error: "Post content is required" });
   }
@@ -210,6 +210,16 @@ app.post("/api/reply", async (req, res) => {
     subtle: "Genuine first, brand mention only if it fits naturally at the very end.",
     value: "Lead with a substantive insight or story, then reference a brand resource if relevant.",
   };
+
+  const moodGuide = {
+    auto: "Match the emotional register of the post. If they're venting, lean empathetic. If they're asking, lean informative. If the topic is heavy, stay serious. If the post is light, light is fine.",
+    humor: "Light and a little witty. A touch of self-aware humor is welcome. Never sarcastic, never punching down, never trying too hard. Punchy, not jokey.",
+    empathetic: "Warm and validating. Sit with the person before offering anything. No fixing, no advice unless they explicitly asked for it. Honor what they're feeling first.",
+    serious: "Direct and grounded. No jokes, no fluff, no rhetorical flourishes. Treat the topic with weight. Plainspoken.",
+    informative: "Lead with concrete information, a specific example, or a useful framing. Be the comment someone would bookmark. Practical over poetic.",
+  };
+  const moodChoice = moodGuide[mood] ? mood : "auto";
+  const cleanAnecdote = (anecdote || "").trim();
 
   const prompt = `You are writing a Reddit response for Troy, who posts as BrightSideReporter.
 
@@ -225,7 +235,14 @@ TROY'S BRANDS (only mention if genuinely relevant):
 - https://youtube.com/@TimelessAchievement — classic success philosophy
 - https://mydriventhreads.com — motivational apparel
 
-TONE: ${toneGuide[tone] || toneGuide.genuine}
+APPROACH (brand presence): ${toneGuide[tone] || toneGuide.genuine}
+
+EMOTIONAL TONE (${moodChoice}): ${moodGuide[moodChoice]}
+
+PERSONAL ANECDOTE (provided by Troy):
+${cleanAnecdote ? `"${cleanAnecdote}"
+
+Weave this anecdote into the response naturally if it genuinely fits the post. You can paraphrase, shorten, or rephrase it to match the comment's voice and length. If it would feel tacked on, forced, or off-topic, do NOT use it — write the comment without it. When you do use it, integrate it as Troy speaking from experience, not as a pasted-in quote.` : "(none provided — write from Troy's general perspective)"}
 
 VOICE — write as a real human leaving a real comment, not a content marketer:
 - No openers like "Great question," "I hear you," "This resonated," "As someone who..." Start in the middle of a thought.
@@ -342,7 +359,7 @@ async function fetchRedditThread(threadUrl) {
 app.post("/api/thread-comment", async (req, res) => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "ANTHROPIC_API_KEY not set" });
-  const { url, tone } = req.body || {};
+  const { url, tone, mood, anecdote } = req.body || {};
   if (!url || !/^https?:\/\/(www\.|old\.)?reddit\.com\/r\/[^/]+\/comments\//i.test(url)) {
     return res.status(400).json({ error: "A valid Reddit thread URL is required" });
   }
@@ -359,6 +376,16 @@ app.post("/api/thread-comment", async (req, res) => {
     subtle: "Genuine first, brand mention only if it fits naturally at the very end.",
     value: "Lead with a substantive insight or story, then reference a brand resource if relevant.",
   };
+
+  const moodGuide = {
+    auto: "Match the emotional register of the thread. If the OP is venting, lean empathetic. If asking, lean informative. If the topic is heavy, stay serious. If the thread is light, light is fine.",
+    humor: "Light and a little witty. A touch of self-aware humor is welcome. Never sarcastic, never punching down, never trying too hard. Punchy, not jokey.",
+    empathetic: "Warm and validating. Sit with the person before offering anything. No fixing, no advice unless they explicitly asked for it. Honor what they're feeling first.",
+    serious: "Direct and grounded. No jokes, no fluff, no rhetorical flourishes. Treat the topic with weight. Plainspoken.",
+    informative: "Lead with concrete information, a specific example, or a useful framing. Be the comment someone would bookmark. Practical over poetic.",
+  };
+  const moodChoice = moodGuide[mood] ? mood : "auto";
+  const cleanAnecdote = (anecdote || "").trim();
 
   const postContent = `Title: ${thread.title}\n\n${thread.body || "(no body text)"}` +
     (thread.topComments.length ? `\n\nTop comments so far:\n- ${thread.topComments.join("\n- ")}` : "");
@@ -377,7 +404,14 @@ TROY'S BRANDS (only mention if genuinely relevant):
 - https://youtube.com/@TimelessAchievement, classic success philosophy
 - https://mydriventhreads.com, motivational apparel
 
-TONE: ${toneGuide[tone] || toneGuide.genuine}
+APPROACH (brand presence): ${toneGuide[tone] || toneGuide.genuine}
+
+EMOTIONAL TONE (${moodChoice}): ${moodGuide[moodChoice]}
+
+PERSONAL ANECDOTE (provided by Troy):
+${cleanAnecdote ? `"${cleanAnecdote}"
+
+Weave this anecdote into the comment naturally if it genuinely fits the thread. You can paraphrase, shorten, or rephrase it to match the comment's voice and length. If it would feel tacked on, forced, or off-topic, do NOT use it — write the comment without it. When you do use it, integrate it as Troy speaking from experience, not as a pasted-in quote.` : "(none provided — write from Troy's general perspective)"}
 
 VOICE — write as a real human leaving a real comment, not a content marketer:
 - No openers like "Great question," "I hear you," "This resonated," "As someone who..." Start in the middle of a thought.
