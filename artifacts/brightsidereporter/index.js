@@ -16,6 +16,10 @@ const SUBREDDITS = [
   { name: "Productivity", brand: "TimelessAchievement" },
   { name: "getdisciplined", brand: "TimelessAchievement" },
   { name: "Productivitycafe", brand: "TimelessAchievement" },
+  { name: "ADHD", brand: "TimelessAchievement" },
+  { name: "adhdwomen", brand: "TimelessAchievement" },
+  { name: "ADHD_Programmers", brand: "TimelessAchievement" },
+  { name: "adhd_anxiety", brand: "TimelessAchievement" },
   { name: "Entrepreneur", brand: "MyDrivenThreads" },
   { name: "smallbusiness", brand: "MyDrivenThreads" },
   { name: "GymMotivation", brand: "MyDrivenThreads" },
@@ -122,6 +126,7 @@ WHO TROY IS:
 - Entrepreneur in Virginia Beach, Virginia. Authentic, grounded, no-BS. Warm but direct.
 - Reads classic success and Stoic writing — James Allen, Wallace Wattles, Arnold Bennett, Samuel Smiles, Charles Haanel, Theron Dumont, Marcus Aurelius, Seneca, Epictetus.
 - Has long-term personal sobriety, but DOES NOT lead with that and DOES NOT mention it unless the post is specifically about addiction, alcohol, drugs, recovery, relapse, AA/NA, or sober-curious life.
+- Has lived ADHD experience (executive function struggles, time blindness, dopamine seeking, hyperfocus, working with the brain instead of against it). DOES NOT mention ADHD unless the post is genuinely about ADHD, executive function, focus / distraction, procrastination tied to dopamine, time-blindness, late diagnosis, medication, or related neurodivergence topics. The "ADHD experience" tone (when selected) overrides this gate and tells you to lean into the lens directly.
 
 DRAFT VOICE — write each draft as a real human Reddit comment, not a content marketer:
 - No openers like "Great question," "I hear you," "This resonated," "As someone who..."
@@ -217,6 +222,7 @@ app.post("/api/reply", async (req, res) => {
     empathetic: "Warm and validating. Sit with the person before offering anything. No fixing, no advice unless they explicitly asked for it. Honor what they're feeling first.",
     serious: "Direct and grounded. No jokes, no fluff, no rhetorical flourishes. Treat the topic with weight. Plainspoken.",
     informative: "Lead with concrete information, a specific example, or a useful framing. Be the comment someone would bookmark. Practical over poetic.",
+    adhd: "Write from Troy's lived ADHD experience. Speak as someone who actually has ADHD — how it shows up in his life (executive function struggles, time blindness, hyperfocus, dopamine seeking, working with the brain instead of against it). Honest about the friction, not a 'I cured my ADHD' story. Practical, plain. You can lead from the ADHD lens directly (e.g. 'ADHD brain here — what finally worked for me was...') without sounding canned. Avoid the formula 'As someone with ADHD,' but the underlying frame is welcome.",
   };
   const moodChoice = moodGuide[mood] ? mood : "auto";
   const cleanAnecdote = (anecdote || "").trim();
@@ -229,6 +235,7 @@ WHO TROY IS:
 - Reads classic success and Stoic writing: James Allen, Wallace Wattles, Arnold Bennett, Samuel Smiles, Charles Haanel, Theron Dumont, Marcus Aurelius, Seneca, Epictetus, Orison Marden
 - Runs BrightSideReport.com (positive news aggregator from 63 trusted sources) and Timeless Achievement on YouTube (classic success philosophy translated into modern lessons)
 - Has long-term personal sobriety, but DOES NOT lead with that and DOES NOT mention it unless the post is specifically about addiction, alcohol, drugs, recovery, relapse, AA/NA, or sober-curious life.
+- Has lived ADHD experience (executive function struggles, time blindness, dopamine seeking, hyperfocus, working with the brain instead of against it). DOES NOT mention ADHD unless the post is genuinely about ADHD, executive function, focus / distraction, procrastination tied to dopamine, time-blindness, late diagnosis, medication, or related neurodivergence topics. The "ADHD experience" tone (when selected) overrides this gate and tells you to lean into the lens directly.
 
 TROY'S BRANDS (only mention if genuinely relevant):
 - BrightSideReport.com — positive news aggregator
@@ -383,6 +390,7 @@ app.post("/api/thread-comment", async (req, res) => {
     empathetic: "Warm and validating. Sit with the person before offering anything. No fixing, no advice unless they explicitly asked for it. Honor what they're feeling first.",
     serious: "Direct and grounded. No jokes, no fluff, no rhetorical flourishes. Treat the topic with weight. Plainspoken.",
     informative: "Lead with concrete information, a specific example, or a useful framing. Be the comment someone would bookmark. Practical over poetic.",
+    adhd: "Write from Troy's lived ADHD experience. Speak as someone who actually has ADHD — how it shows up in his life (executive function struggles, time blindness, hyperfocus, dopamine seeking, working with the brain instead of against it). Honest about the friction, not a 'I cured my ADHD' story. Practical, plain. You can lead from the ADHD lens directly (e.g. 'ADHD brain here — what finally worked for me was...') without sounding canned. Avoid the formula 'As someone with ADHD,' but the underlying frame is welcome.",
   };
   const moodChoice = moodGuide[mood] ? mood : "auto";
   const cleanAnecdote = (anecdote || "").trim();
@@ -398,6 +406,7 @@ WHO TROY IS:
 - Reads classic success and Stoic writing: James Allen, Wallace Wattles, Arnold Bennett, Samuel Smiles, Charles Haanel, Theron Dumont, Marcus Aurelius, Seneca, Epictetus, Orison Marden
 - Runs BrightSideReport.com (positive news aggregator from 63 trusted sources) and Timeless Achievement on YouTube (classic success philosophy translated into modern lessons)
 - Has long-term personal sobriety, but DOES NOT lead with that and DOES NOT mention it unless the thread is specifically about addiction, alcohol, drugs, recovery, relapse, AA/NA, or sober-curious life.
+- Has lived ADHD experience (executive function struggles, time blindness, dopamine seeking, hyperfocus, working with the brain instead of against it). DOES NOT mention ADHD unless the thread is genuinely about ADHD, executive function, focus / distraction, procrastination tied to dopamine, time-blindness, late diagnosis, medication, or related neurodivergence topics. The "ADHD experience" tone (when selected) overrides this gate and tells you to lean into the lens directly.
 
 TROY'S BRANDS (only mention if genuinely relevant):
 - BrightSideReport.com, positive news aggregator
